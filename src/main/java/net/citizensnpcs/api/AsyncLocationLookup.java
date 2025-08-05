@@ -170,7 +170,7 @@ public class AsyncLocationLookup extends BukkitRunnable {
             npcFuture = null;
         }
         if (npcFuture == null) {
-            Map<UUID, Collection<TreeFactory.Node<NPC>>> map = Maps.newHashMap();
+            Map<UUID, Collection<TreeFactory.Node<NPC>>> map = Maps.newConcurrentMap();
             Location loc = new Location(null, 0, 0, 0);
             for (NPC npc : sourceRegistry) {
                 if (!npc.isSpawned())
@@ -191,7 +191,7 @@ public class AsyncLocationLookup extends BukkitRunnable {
             playerFuture = null;
         }
         if (playerFuture == null) {
-            Map<UUID, Collection<TreeFactory.Node<Player>>> map = Maps.newHashMap();
+            Map<UUID, Collection<TreeFactory.Node<Player>>> map = Maps.newConcurrentMap();
             Location loc = new Location(null, 0, 0, 0);
             for (World world : Bukkit.getServer().getWorlds()) {
                 Collection<Player> players = Collections2.filter(world.getPlayers(), p -> {
@@ -291,7 +291,7 @@ public class AsyncLocationLookup extends BukkitRunnable {
         public void set(UUID key, String value, T marker) {
             if (marker instanceof Location || marker instanceof World)
                 throw new IllegalArgumentException("Invalid marker");
-            sent.computeIfAbsent(key, k -> Maps.newHashMap()).put(value, marker);
+            sent.computeIfAbsent(key, k -> Maps.newConcurrentMap()).put(value, marker);
         }
     }
 
