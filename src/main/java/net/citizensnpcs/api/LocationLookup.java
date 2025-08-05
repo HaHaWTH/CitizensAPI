@@ -260,8 +260,8 @@ public class LocationLookup extends BukkitRunnable {
     }
 
     public static class PerPlayerMetadata<T> {
-        private final BiConsumer<PerPlayerMetadata<T>, PlayerJoinEvent> onJoin;
-        private final Map<UUID, Map<String, T>> sent = Maps.newHashMap();
+        final BiConsumer<PerPlayerMetadata<T>, PlayerJoinEvent> onJoin;
+        final Map<UUID, Map<String, T>> sent = Maps.newHashMap();
 
         public PerPlayerMetadata(BiConsumer<PerPlayerMetadata<T>, PlayerJoinEvent> onJoin) {
             this.onJoin = onJoin;
@@ -288,11 +288,11 @@ public class LocationLookup extends BukkitRunnable {
         public void set(UUID key, String value, T marker) {
             if (marker instanceof Location || marker instanceof World)
                 throw new IllegalArgumentException("Invalid marker");
-            sent.computeIfAbsent(key, k -> Maps.newHashMap()).put(value, marker);
+            sent.computeIfAbsent(key, k -> Maps.newConcurrentMap()).put(value, marker);
         }
     }
 
-    private static final class TreeFactory<K, V> implements Callable<Map<K, PhTreeF<V>>> {
+    public static final class TreeFactory<K, V> implements Callable<Map<K, PhTreeF<V>>> {
         private final Map<K, Collection<Node<V>>> source;
 
         public TreeFactory(Map<K, Collection<Node<V>>> source) {
@@ -301,7 +301,7 @@ public class LocationLookup extends BukkitRunnable {
 
         @Override
         public Map<K, PhTreeF<V>> call() throws Exception {
-            Map<K, PhTreeF<V>> result = Maps.newHashMap();
+            Map<K, PhTreeF<V>> result = Maps.newConcurrentMap();
             for (K k : source.keySet()) {
                 PhTreeF<V> tree = PhTreeF.create(3);
                 for (Node<V> entry : source.get(k)) {

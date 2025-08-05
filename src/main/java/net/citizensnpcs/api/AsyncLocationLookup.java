@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
@@ -20,7 +19,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
@@ -31,7 +29,7 @@ import ch.ethz.globis.phtree.PhTreeF;
 import net.citizensnpcs.api.npc.NPC;
 import net.citizensnpcs.api.npc.NPCRegistry;
 
-public class AsyncLocationLookup extends BukkitRunnable {
+public class AsyncLocationLookup extends LocationLookup {
     private final Map<String, PerPlayerMetadata<?>> metadata = Maps.newConcurrentMap();
     private Future<Map<UUID, PhTreeF<NPC>>> npcFuture = null;
     private Map<UUID, PhTreeF<NPC>> npcWorlds = Maps.newConcurrentMap();
@@ -258,70 +256,6 @@ public class AsyncLocationLookup extends BukkitRunnable {
             }
             if (future == null) {
                 future = ForkJoinPool.commonPool().submit(new TreeFactory<>(generateLoaderMap()));
-            }
-        }
-    }
-
-    public static class PerPlayerMetadata<T> {
-        private final BiConsumer<PerPlayerMetadata<T>, PlayerJoinEvent> onJoin;
-        private final Map<UUID, Map<String, T>> sent = Maps.newConcurrentMap();
-
-        public PerPlayerMetadata(BiConsumer<PerPlayerMetadata<T>, PlayerJoinEvent> onJoin) {
-            this.onJoin = onJoin;
-        }
-
-        public T getMarker(UUID key, String value) {
-            return sent.getOrDefault(key, Collections.emptyMap()).get(value);
-        }
-
-        public boolean has(UUID key, String value) {
-            return sent.getOrDefault(key, Collections.emptyMap()).containsKey(value);
-        }
-
-        public boolean remove(UUID key, String value) {
-            return sent.getOrDefault(key, Collections.emptyMap()).remove(value) != null;
-        }
-
-        public void removeAllValues(String value) {
-            for (Map<String, T> map : sent.values()) {
-                map.remove(value);
-            }
-        }
-
-        public void set(UUID key, String value, T marker) {
-            if (marker instanceof Location || marker instanceof World)
-                throw new IllegalArgumentException("Invalid marker");
-            sent.computeIfAbsent(key, k -> Maps.newConcurrentMap()).put(value, marker);
-        }
-    }
-
-    private static final class TreeFactory<K, V> implements Callable<Map<K, PhTreeF<V>>> {
-        private final Map<K, Collection<Node<V>>> source;
-
-        public TreeFactory(Map<K, Collection<Node<V>>> source) {
-            this.source = source;
-        }
-
-        @Override
-        public Map<K, PhTreeF<V>> call() throws Exception {
-            Map<K, PhTreeF<V>> result = Maps.newConcurrentMap();
-            for (K k : source.keySet()) {
-                PhTreeF<V> tree = PhTreeF.create(3);
-                for (Node<V> entry : source.get(k)) {
-                    tree.put(entry.loc, entry.t);
-                }
-                result.put(k, tree);
-            }
-            return result;
-        }
-
-        public static class Node<T> {
-            public double[] loc;
-            public T t;
-
-            public Node(double[] loc, T t) {
-                this.loc = loc;
-                this.t = t;
             }
         }
     }
